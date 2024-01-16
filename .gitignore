@@ -1,2 +1,2 @@
 node_modules
-**/dbConfig.ts
+src/Database/Config/dbConfig.ts
