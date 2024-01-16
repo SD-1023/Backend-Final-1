@@ -1,6 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
     const Address = sequelize.define("Address", {
-       
         country: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -43,8 +42,7 @@ module.exports = (sequelize, DataTypes) => {
           
           },
           is_default: {
-            type: DataTypes.BOOLEAN,
-            
+            type: DataTypes.BOOLEAN, 
 }},{
   timestamps: true,
 });

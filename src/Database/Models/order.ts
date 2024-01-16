@@ -29,11 +29,9 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
         },
     }, {
-      
         timestamps: true,
         createdAt: ' order_date', 
         updatedAt: ' order_updated', 
-
     });
 
     return Order;
