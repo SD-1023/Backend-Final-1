@@ -1,10 +1,6 @@
-import { sequelize } from '../Database/db';
-import { Discount } from '../models/discount';
-import { Order } from '../models/order';
-import { OrderItem } from '../models/orderItem';
-import { Product } from '../models/product';
 import * as categoryService from '../services/categoryService';
 
+const db = require('../Database/Models/index.ts');
 interface IProduct {
   id: number;
   name: string;
@@ -36,10 +32,10 @@ export const placeOrder = async (req, res) => {
   try {
     const products = req.body;
 
-    const newOrder = await Order.create({
+    const newOrder = await db.Order.create({
       order_number: 'ORD123', // what is order_number
       total_amount: 0,
-      order_date: sequelize.literal('CURRENT_TIMESTAMP'),
+      order_date: db.sequelize.literal('CURRENT_TIMESTAMP'),
       status: 'Pending',
       payment_method: 'Credit Card'
     }) as unknown as IOrder | null ;
@@ -47,13 +43,13 @@ export const placeOrder = async (req, res) => {
     let totalPrice = 0;
     for (const item of products) {
       //Check Product Existence
-      const product = await Product.findOne({
+      const product = await db.Product.findOne({
         where: {
           id: item.product_id,
         }
       }) as IProduct | null;
 
-      const discount = await Discount.findOne({
+      const discount = await db.Discount.findOne({
         where: {
           id: product?.id,
         }
@@ -64,7 +60,7 @@ export const placeOrder = async (req, res) => {
       let priceOfProductAfterDiscount =  productPrice - (discountPercentage * productPrice);
       let quantity = item.quantity;
       totalPrice += (priceOfProductAfterDiscount*quantity);
-      await OrderItem.create({
+      await db.OrderItem.create({
         price: productPrice,
         quantity: quantity,
         order_id: newOrder?.id,
