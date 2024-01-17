@@ -1,82 +1,25 @@
-import * as categoryService from '../services/categoryService';
+import { createOrder, processOrderItem, updateOrderTotalAmount } from '../services/orderService';
 
 const db = require('../Database/Models/index.ts');
-interface IProduct {
-  id: number;
-  name: string;
-  sub_title: string;
-  model: string;
-  description: string;
-  price: number;
-  stock_quantity: number;
-}
-
-interface IOrder {
-  id: number;
-  order_number: number;
-  total_amount: number;
-  order_date: string;
-  status: string;
-  payment_method: string;
-}
-
-interface IDiscount {
-  id: number;
-  percentage: number;
-  start_date: string;
-  end_date: string;
-  is_valid: boolean;
-}
-
 export const placeOrder = async (req, res) => {
+  const transaction1 = await db.sequelize.transaction();
   try {
     const products = req.body;
-
-    const newOrder = await db.Order.create({
-      order_number: 'ORD123', // what is order_number
-      total_amount: 0,
-      order_date: db.sequelize.literal('CURRENT_TIMESTAMP'),
-      status: 'Pending',
-      payment_method: 'Credit Card'
-    }) as unknown as IOrder | null ;
-
+    const newOrder = await createOrder(transaction1);
     let totalPrice = 0;
     for (const item of products) {
-      //Check Product Existence
-      const product = await db.Product.findOne({
-        where: {
-          id: item.product_id,
-        }
-      }) as IProduct | null;
-
-      const discount = await db.Discount.findOne({
-        where: {
-          id: product?.id,
-        }
-      }) as IDiscount | null;
-      
-      let productPrice = (product ? product.price : 0);
-      let discountPercentage = (discount?.is_valid ? discount.percentage : 0) / 100;
-      let priceOfProductAfterDiscount =  productPrice - (discountPercentage * productPrice);
-      let quantity = item.quantity;
-      totalPrice += (priceOfProductAfterDiscount*quantity);
-      await db.OrderItem.create({
-        price: productPrice,
-        quantity: quantity,
-        order_id: newOrder?.id,
-        product_id: product?.id,   
-      });
+      await processOrderItem(item, newOrder, totalPrice, transaction1);
     }
+    // await updateOrderTotalAmount(newOrder, totalPrice,transaction1);
+    await transaction1.commit();
+    res.status(200).json(newOrder);
 
-    await newOrder?.set(
-      {
-        total_amount: totalPrice,
+    } catch (error: any) {
+      await transaction1.rollback();
+      if (error.message.includes("Insufficient quantity")) {
+        res.status(409).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Internal server error." });
       }
-    )
-    await newOrder?.save();
-
-      res.status(200).json(newOrder);
-    } catch (error) {
-      res.status(500).json(error);
     }
 };
