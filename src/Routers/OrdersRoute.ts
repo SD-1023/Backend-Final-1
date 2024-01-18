@@ -1,8 +1,8 @@
 import express, { Router } from 'express';
-import * as orderController from '../Controllers/orderController';
+import { placeOrder } from '../Controllers/orderController';
 const router: Router = express.Router();
 
 //Endpoint to place an order to a user 
-router.post('/', orderController.placeOrder);
+router.post('/', placeOrder);
 
 export default router;

@@ -1,4 +1,3 @@
-
 import { Request, Response } from 'express';
 const db = require('../Database/Models/index.ts');
 

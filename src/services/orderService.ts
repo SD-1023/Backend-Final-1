@@ -37,34 +37,43 @@ interface IOrderItems {
     order_id: number;
 }
 
-export const createOrder = async (transaction = null) => {
+export const createOrder = async (userID: number,transaction = null) => {
     try {
+        let orderNumber = generateOrderNumber()
         return await db.Order.create({
-            user_id: 1, // TODO: handel the user_id from the session 
-            order_number: '#123456789', // TODO: Generate random order_number string
+            user_id: userID, 
+            order_number: orderNumber,
             order_date: db.sequelize.literal('CURRENT_TIMESTAMP'),
             status: 'processing',
             payment_method: 'Credit Card'
         }, { transaction });
     } catch (error: any) {
-        console.error(`Failed to create an order: ${error.message}`);
+        throw new Error(`Failed to create an order`);
     }
 };
 
+function generateOrderNumber() {
+    const randomNumber = Math.floor(Math.random() * 1000000000);
+    const randomString = `#${String(randomNumber).padStart(9, '0')}`;
+    return randomString;
+}
+
 export const processOrderItem = async (item: IOrderItems, newOrder: IOrder, totalPrice: number, transaction = null) => {
     const product = await checkProductExistence(item.product_id, transaction);
-    validateQuantity(item.quantity, product.stock_quantity, item.product_id);
-  
-    const newQuantity = product.stock_quantity - item.quantity;
-    await updateProductStock(product, newQuantity, transaction);
-  
-    const discount = await getProductDiscount(product.id, transaction);
-    const priceOfProductAfterDiscount = calculatePriceAfterDiscount(product, discount);
     const quantity = item.quantity;
-    totalPrice += priceOfProductAfterDiscount * quantity;
+
+    validateQuantity(quantity, product.stock_quantity, item.product_id);
+  
+    const newStockQuantity = product.stock_quantity - quantity;
+    await updateProductStock(product, newStockQuantity, transaction);
   
     await createOrderItem(product, newOrder, quantity, transaction);
 };
+
+// const discount = await getProductDiscount(product.id, transaction);
+// const priceOfProductAfterDiscount = calculatePriceAfterDiscount(product, discount);
+// totalPrice += priceOfProductAfterDiscount * quantity;
+// these can be used to measure the total amount of the order items with the discount
 
 const checkProductExistence = async (productId: number, transaction = null) => {
     const product = await db.Product.findOne({
@@ -87,8 +96,12 @@ const validateQuantity = (requestedQuantity: number, availableQuantity: number, 
 };
   
 const updateProductStock = async (product: any, newQuantity: number, transaction = null) => {
-    product.stock_quantity = newQuantity;
-    await product.save({ transaction });
+    try {
+        product.stock_quantity = newQuantity;
+        await product.save({ transaction });
+    } catch (error) {
+        throw new Error(`failed to update product stock with ID ${product.id}.`);
+    }
 };
 
 
@@ -107,16 +120,37 @@ const calculatePriceAfterDiscount = (product: IProduct, discount: IDiscount) => 
 };
 
 const createOrderItem = async (product: IProduct, newOrder: IOrder, quantity: number, transaction = null) => {
-    await db.OrderItem.create({
-      price: product.price,
-      quantity,
-      order_id: newOrder.id,
-      product_id: product.id,
-    }, { transaction });
+    try {
+        await db.OrderItem.create({
+          price: product.price,
+          quantity,
+          order_id: newOrder.id,
+          product_id: product.id,
+        }, { transaction });
+    } catch (error:any) {
+        throw new Error(`failed to create and order item for product with ID ${product.id}.`);
+    }
 };
 
 export const updateOrderTotalAmount = async (newOrder: any, totalPrice: number, transaction = null) => {
-    newOrder.total_amount = totalPrice;
-    await newOrder.save({ transaction });
+    try {        
+        newOrder.total_amount = totalPrice;
+        await newOrder.save({ transaction });
+    } catch (error) {
+        throw new Error(`failed to update order total amount for order with ID ${newOrder.id}.`);
+    }
 };
-  
+
+export const getUserIdFromSession = async (session: string) => {
+    const userSession = await db.Session.findOne({ where: { session } });
+    if (!userSession) {
+        throw new Error('Session not found');
+    }
+    const id = userSession.user_id; // get the user id from the session
+    const user = await db.User.findOne({ where: { id } });
+    if (!user) {
+        throw new Error('User not found');
+    }
+    const userID = id
+    return userID
+}
