@@ -5,6 +5,7 @@ const db = require('../Database/Models/index.ts');
 
 export const placeOrder = async (req, res) => {
   const transaction1 = await db.sequelize.transaction();
+
   try {
     await placeOrderSchema.validateAsync(req.body);
     const sessionId = req.headers['authorization'] as string;
@@ -12,12 +13,14 @@ export const placeOrder = async (req, res) => {
     const products = req.body;
 
     const newOrder = await createOrder(userID, transaction1);
+
     for (const item of products) {
       await processOrderItem(item, newOrder, transaction1);
+
     }
     await transaction1.commit();
-    res.status(200).json(newOrder);
 
+    res.status(200).json(newOrder);
     } catch (error: any) {
       await transaction1.rollback();
       if(error.isJoi === true){

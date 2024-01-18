@@ -58,7 +58,7 @@ function generateOrderNumber() {
     return randomString;
 }
 
-export const processOrderItem = async (item: IOrderItems, newOrder: IOrder, totalPrice: number, transaction = null) => {
+export const processOrderItem = async (item: IOrderItems, newOrder: IOrder, transaction = null) => {
     const product = await checkProductExistence(item.product_id, transaction);
     const quantity = item.quantity;
 
@@ -66,7 +66,7 @@ export const processOrderItem = async (item: IOrderItems, newOrder: IOrder, tota
   
     const newStockQuantity = product.stock_quantity - quantity;
     await updateProductStock(product, newStockQuantity, transaction);
-  
+
     await createOrderItem(product, newOrder, quantity, transaction);
 };
 
