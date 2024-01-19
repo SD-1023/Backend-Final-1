@@ -80,14 +80,17 @@ const checkProductExistence = async (productId: number, transaction = null) => {
       where: {
         id: productId,
       }
-    }, { transaction });
+    }, { 
+        transaction,
+        lock: true  // a race condition might happen to this code 
+    });
   
     if (!product) {
       throw new Error(`Product with ID ${productId} not found.`);
     }
   
     return product;
-};
+}; // 
 
 const validateQuantity = (requestedQuantity: number, availableQuantity: number, productId: number) => {
     if (requestedQuantity > availableQuantity) {
