@@ -37,9 +37,29 @@ interface IOrderItems {
     order_id: number;
 }
 
+const generateOrderNumber = async () => {
+    let orderNumber: string = generateRandomOrderNumber();
+    let checkOrderNumber = await db.Order.findOne({
+        where:{
+            order_number: orderNumber
+        }
+    });
+
+    while(checkOrderNumber){
+        orderNumber = generateRandomOrderNumber()
+        checkOrderNumber = await db.Order.findOne({
+            where:{
+                order_number: orderNumber
+            }
+        });
+    }
+
+    return orderNumber;
+}
+
 export const createOrder = async (userID: number,transaction = null) => {
     try {
-        let orderNumber = generateOrderNumber()
+        let orderNumber: string =  await generateOrderNumber();
         return await db.Order.create({
             user_id: userID, 
             order_number: orderNumber,
@@ -52,7 +72,7 @@ export const createOrder = async (userID: number,transaction = null) => {
     }
 };
 
-function generateOrderNumber() {
+function generateRandomOrderNumber() {
     const randomNumber = Math.floor(Math.random() * 1000000000);
     const randomString = `#${String(randomNumber).padStart(9, '0')}`;
     return randomString;
@@ -90,7 +110,7 @@ const checkProductExistence = async (productId: number, transaction = null) => {
     }
   
     return product;
-}; // 
+}; 
 
 const validateQuantity = (requestedQuantity: number, availableQuantity: number, productId: number) => {
     if (requestedQuantity > availableQuantity) {

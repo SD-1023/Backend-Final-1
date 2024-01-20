@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
         },
    
     }, {
-        timestamps: true, //why not false ?
+        timestamps: true, 
     });
 
     return Session;
